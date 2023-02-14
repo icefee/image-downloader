@@ -12,7 +12,7 @@ class ListModel<E> {
 
   final GlobalKey<AnimatedGridState> listKey;
   final RemovedItemBuilder<E> removedItemBuilder;
-  List<E> _items;
+  final List<E> _items;
 
   AnimatedGridState? get _animatedGrid => listKey.currentState;
 
@@ -38,16 +38,10 @@ class ListModel<E> {
   }
 
   List<E> get items => _items;
-  void setItems(List<E> items) {
-    _items = items;
-  }
 
   int get length => _items.length;
 
   E operator [](int index) => _items[index];
 
   int indexOf(E item) => _items.indexOf(item);
-
-  bool get isNotEmpty => _items.isNotEmpty;
-  bool get isEmpty => _items.isEmpty;
 }

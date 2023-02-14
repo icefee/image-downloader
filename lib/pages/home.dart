@@ -32,16 +32,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.initState();
 
     imageListModel = ListModel<ImageSource>(
-        listKey: _gridKey,
-        removedItemBuilder: _buildRemovedItem
-    );
+        listKey: _gridKey, removedItemBuilder: _buildRemovedItem);
 
     WidgetsBinding.instance.addObserver(this);
     readClipboard();
   }
 
   Future<void> saveToGallery() async {
-    if (imageListModel.isNotEmpty) {
+    if (imageCount > 0) {
       if (imageListModel.items.every((ImageSource source) => source.saved)) {
         Fluttertoast.showToast(msg: '所有的图片都已经保存', gravity: ToastGravity.BOTTOM);
         return;
@@ -78,12 +76,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         loading = true;
       });
       List<String> list = await getImages(url);
-      setState(() {
-        imageListModel.setItems(
-          list.map((String url) => ImageSource(url)).toList()
-        );
-        loading = false;
-      });
+      for (int i = imageListModel.length - 1; i >= 0; i--) {
+        imageListModel.removeAt(i);
+      }
+      for (int j = 0; j < list.length; j++) {
+        imageListModel.insert(imageListModel.length, ImageSource(list[j]));
+      }
+      loading = false;
+      setState(() {});
     } else {
       Fluttertoast.showToast(msg: '目标地址找不到图片', gravity: ToastGravity.BOTTOM);
     }
@@ -103,7 +103,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ),
       errorWidget: (BuildContext context, String url, error) =>
-          const Icon(Icons.error),
+          const Icon(Icons.error, size: 36, color: Colors.orange),
     );
   }
 
@@ -137,6 +137,30 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  Widget _buildAlertWidget(bool show,
+      {required String label, required Icon icon}) {
+    return AnimatedPositioned(
+      left: 0,
+      right: 0,
+      bottom: show ? -40 : 0,
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        color: Colors.black.withOpacity(.5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            icon,
+            const SizedBox(
+              width: 8,
+            ),
+            Text(label, style: const TextStyle(color: Colors.white))
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // TODO: implement didChangeAppLifecycleState
@@ -162,20 +186,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           onTap: () {
             showDialog(
                 context: context,
-                builder: (BuildContext
-                context) =>
-                    Scaffold(
+                builder: (BuildContext context) => Scaffold(
                       appBar: AppBar(
-                        title:
-                        const Text('预览'),
+                        title: const Text('预览'),
                       ),
                       body: Center(
-                        child: imageWidget(
-                            source.url),
+                        child: imageWidget(source.url),
                       ),
-                      backgroundColor: Colors
-                          .black
-                          .withOpacity(.4),
+                      backgroundColor: Colors.black.withOpacity(.4),
                     ));
           },
         ),
@@ -186,79 +204,39 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           bottom: 0,
           child: AnimatedScale(
             scale: editMode ? 1 : 0,
-            duration: const Duration(
-                milliseconds: 400),
+            duration: const Duration(milliseconds: 400),
             child: TextButton(
-                style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero
-                ),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
                 onPressed: onRemove,
                 child: Container(
-                    constraints:
-                    const BoxConstraints
-                        .expand(),
-                    color: Colors.black
-                        .withOpacity(.5),
-                    child: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.red,
-                        size: 36
-                    )
-                )
-            ),
+                    constraints: const BoxConstraints.expand(),
+                    color: Colors.black.withOpacity(.5),
+                    child: const Icon(Icons.delete_outline,
+                        color: Colors.red, size: 36))),
           ),
         ),
-        AnimatedPositioned(
-          left: 0,
-          right: 0,
-          bottom: (!source.saved || editMode)
-              ? -40
-              : 0,
-          duration: const Duration(
-              milliseconds: 400),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            color:
-            Colors.black.withOpacity(.5),
-            child: const Icon(Icons.done,
-                color: Colors.green),
-          ),
-        ),
-        AnimatedPositioned(
-            left: 0,
-            right: 0,
-            bottom:
-            (!source.failed || editMode)
-                ? -40
-                : 0,
-            duration: const Duration(
-                milliseconds: 400),
-            child: Container(
-              padding:
-              const EdgeInsets.all(8),
-              color: Colors.black
-                  .withOpacity(.4),
-              child: const Icon(Icons.error,
-                  color: Colors.red),
-            ))
+        _buildAlertWidget(!source.saved || editMode,
+            label: '下载成功', icon: const Icon(Icons.done, color: Colors.green)),
+        _buildAlertWidget(!source.failed || editMode,
+            label: '下载出错', icon: const Icon(Icons.error, color: Colors.red))
       ],
     );
   }
 
-  Widget _gridItemBuilder(BuildContext context, int index, Animation<double> animation) {
+  Widget _gridItemBuilder(
+      BuildContext context, int index, Animation<double> animation) {
     return widgets.ImageGrid(
         animation: animation,
-        child: _buildGrid(imageListModel[index], () => onRemove(index))
-    );
+        child: _buildGrid(imageListModel[index], () => onRemove(index)));
   }
 
   Widget _buildRemovedItem(
       ImageSource source, BuildContext context, Animation<double> animation) {
     return widgets.ImageGrid(
-      animation: animation,
-      removing: true,
-      child: _buildGrid(source, () => onRemove(imageListModel.indexOf(source)))
-    );
+        animation: animation,
+        removing: true,
+        child:
+            _buildGrid(source, () => onRemove(imageListModel.indexOf(source))));
   }
 
   int get imageCount => imageListModel.length;
@@ -295,82 +273,97 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               child: Stack(
             children: [
               widgets.Card(
-                margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                child: Container(
-                  constraints: const BoxConstraints.expand(),
-                  child: imageListModel.isNotEmpty
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(5.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('获取到$imageCount张图片'),
-                                  IconButton(
-                                      onPressed: () {
-                                        if (!downloading) {
-                                          setState(() {
-                                            editMode = !editMode;
-                                          });
-                                        }
-                                      },
-                                      color: Colors.green,
-                                      icon: Icon(editMode
-                                          ? Icons.done
-                                          : Icons.edit_note))
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Stack(
-                                clipBehavior: Clip.hardEdge,
-                                children: [
-                                  AnimatedGrid(
-                                    key: _gridKey,
-                                    gridDelegate:
-                                        const SliverGridDelegateWithFixedCrossAxisCount(
-                                            crossAxisCount: 3,
-                                            mainAxisSpacing: 1.0,
-                                            crossAxisSpacing: 1.0),
-                                    initialItemCount: imageCount,
-                                    itemBuilder: _gridItemBuilder,
+                  margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  child: Stack(
+                    children: [
+                      AnimatedOpacity(
+                        opacity: imageCount > 0 ? 1 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Container(
+                            constraints: const BoxConstraints.expand(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(5.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('获取到$imageCount张图片'),
+                                      IconButton(
+                                          onPressed: () {
+                                            if (!downloading) {
+                                              setState(() {
+                                                editMode = !editMode;
+                                              });
+                                            }
+                                          },
+                                          color: Colors.green,
+                                          icon: Icon(editMode
+                                              ? Icons.done
+                                              : Icons.edit_note))
+                                    ],
                                   ),
-                                  AnimatedPositioned(
-                                    left: 0,
-                                    bottom: downloading ? 0 : -60,
-                                    right: 0,
-                                    duration: const Duration(microseconds: 400),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Container(
-                                          color: Colors.black.withOpacity(.75),
-                                          padding: const EdgeInsets.all(12.0),
-                                          child: Text(
-                                            '图片下载中 $imageSaved / $imageCount',
-                                            style: const TextStyle(
-                                                color: Colors.white),
-                                          ),
+                                ),
+                                Expanded(
+                                  child: Stack(
+                                    clipBehavior: Clip.hardEdge,
+                                    children: [
+                                      AnimatedGrid(
+                                        key: _gridKey,
+                                        gridDelegate:
+                                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                                crossAxisCount: 3,
+                                                mainAxisSpacing: 1.0,
+                                                crossAxisSpacing: 1.0),
+                                        initialItemCount: imageCount,
+                                        itemBuilder: _gridItemBuilder,
+                                      ),
+                                      AnimatedPositioned(
+                                        left: 0,
+                                        bottom: downloading ? 0 : -60,
+                                        right: 0,
+                                        duration:
+                                            const Duration(microseconds: 400),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Container(
+                                              color:
+                                                  Colors.black.withOpacity(.75),
+                                              padding:
+                                                  const EdgeInsets.all(12.0),
+                                              child: Text(
+                                                '图片下载中 $imageSaved / $imageCount',
+                                                style: const TextStyle(
+                                                    color: Colors.white),
+                                              ),
+                                            ),
+                                            imageCount > 0
+                                                ? LinearProgressIndicator(
+                                                    value:
+                                                        imageSaved / imageCount)
+                                                : Container()
+                                          ],
                                         ),
-                                        LinearProgressIndicator(
-                                            value: imageSaved / imageCount)
-                                      ],
-                                    ),
-                                  )
-                                ],
-                              ),
-                            )
-                          ],
-                        )
-                      : const Center(
-                          child: Text('暂无图片'),
+                                      )
+                                    ],
+                                  ),
+                                )
+                              ],
+                            )),
+                      ),
+                      AnimatedOpacity(
+                        opacity: imageCount > 0 ? 0 : 1,
+                        duration: const Duration(milliseconds: 200),
+                        child: const Center(
+                          child: Text('输入网址获取图片'),
                         ),
-                ),
-              ),
+                      )
+                    ],
+                  )),
               widgets.LoadingOverlay(
                 open: loading,
               )
@@ -378,7 +371,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ))
         ],
       ),
-      floatingActionButton: (imageListModel.isNotEmpty && !downloading)
+      floatingActionButton: (imageCount > 0 && !downloading)
           ? FloatingActionButton(
               onPressed: saveToGallery,
               tooltip: '保存到相册',
