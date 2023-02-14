@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gallery_saver/gallery_saver.dart';
+import 'package:clipboard/clipboard.dart';
 import '../widget/entry.dart' as widgets;
 import '../tool/api.dart';
 import '../type/image.dart';
@@ -13,13 +14,18 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   bool loading = false;
   List<ImageSource> images = [];
   bool editMode = false;
   int imageSaved = 0;
   bool downloading = false;
+  TextEditingController textEditingController = TextEditingController(
+    text: ''
+  );
+
+  String lastPasteText = '';
 
   Future<void> saveToGallery() async {
     if (images.isNotEmpty) {
@@ -94,6 +100,61 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> readClipboard() async {
+    String pasteText = await FlutterClipboard.paste();
+    if (pasteText.startsWith('http') && pasteText != lastPasteText && context.mounted) {
+      showDialog(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: const Text('从复制的链接查询'),
+            content: const Text('检测到你刚刚复制了一个链接, 是否立即查询?', maxLines: 2, softWrap: true),
+            actions: [
+              TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    textEditingController.text = pasteText;
+                    getImageList(pasteText);
+                  },
+                  child: const Text('查询链接')
+              ),
+              TextButton(
+                  style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey.shade600
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消')
+              )
+            ],
+          )
+      );
+      lastPasteText = pasteText;
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    readClipboard();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // TODO: implement didChangeAppLifecycleState
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      readClipboard();
+    }
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,10 +166,12 @@ class _HomePageState extends State<HomePage> {
         children: <Widget>[
           widgets.Card(
             child: TextField(
+              controller: textEditingController,
               decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: '链接地址'
               ),
+              spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.send,
               onSubmitted: (String text) {
@@ -140,6 +203,7 @@ class _HomePageState extends State<HomePage> {
                                         });
                                       }
                                     },
+                                    color: Colors.green,
                                     icon: Icon(
                                         editMode ? Icons.done : Icons.edit_note
                                     )
