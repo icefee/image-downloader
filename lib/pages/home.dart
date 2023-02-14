@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import '../widget/entry.dart' as widgets;
 import '../tool/api.dart';
+import '../type/image.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
@@ -15,18 +16,37 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
 
   bool loading = false;
-  List<String> images = [];
+  List<ImageSource> images = [];
   bool editMode = false;
   int imageSaved = 0;
   bool downloading = false;
 
   Future<void> saveToGallery() async {
     if (images.isNotEmpty) {
+      if (images.every((ImageSource source) => source.saved)) {
+        Fluttertoast.showToast(
+            msg: '所有的图片都已经保存',
+            gravity: ToastGravity.BOTTOM
+        );
+        return;
+      }
       setState(() {
+        imageSaved = 0;
         downloading = true;
       });
-      for (final String imageUrl in images) {
-        await GallerySaver.saveImage(imageUrl, albumName: 'image-downloader');
+      for (final ImageSource source in images) {
+        if (!source.saved) {
+          try {
+            await GallerySaver.saveImage(
+                source.url,
+                albumName: 'image-downloader'
+            );
+            source.saved = true;
+          }
+          catch (err) {
+            source.failed = true;
+          }
+        }
         imageSaved ++;
         setState(() {});
       }
@@ -45,7 +65,7 @@ class _HomePageState extends State<HomePage> {
       });
       List<String> list = await getImages(url);
       setState(() {
-        images = list;
+        images = list.map((String url) => ImageSource(url)).toList();
         loading = false;
       });
     }
@@ -87,7 +107,7 @@ class _HomePageState extends State<HomePage> {
             child: TextField(
               decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  labelText: '图片地址'
+                  labelText: '链接地址'
               ),
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.send,
@@ -133,13 +153,15 @@ class _HomePageState extends State<HomePage> {
                               children: [
                                 GridView(
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3
+                                    crossAxisCount: 3,
+                                    mainAxisSpacing: 1.0,
+                                    crossAxisSpacing: 1.0
                                   ),
-                                  children: images.map((String url) => Stack(
+                                  children: images.map((ImageSource source) => Stack(
                                     fit: StackFit.expand,
                                     children: [
                                       InkWell(
-                                        child: imageWidget(url),
+                                        child: imageWidget(source.url),
                                         onTap: () {
                                           showDialog(
                                               context: context,
@@ -148,7 +170,7 @@ class _HomePageState extends State<HomePage> {
                                                   title: const Text('预览'),
                                                 ),
                                                 body: Center(
-                                                  child: imageWidget(url),
+                                                  child: imageWidget(source.url),
                                                 ),
                                                 backgroundColor: Colors.black.withOpacity(.4),
                                               )
@@ -164,14 +186,40 @@ class _HomePageState extends State<HomePage> {
                                           offstage: !editMode,
                                           child: Container(
                                             constraints: const BoxConstraints.expand(),
-                                            color: Colors.black.withOpacity(.4),
+                                            color: Colors.black.withOpacity(.5),
                                             child: IconButton(
                                               icon: const Icon(Icons.delete_forever_outlined, color: Colors.red, size: 36),
                                               onPressed: () {
-                                                images.remove(url);
+                                                images.remove(source);
                                                 setState(() {});
                                               },
                                             ),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Offstage(
+                                          offstage: !source.saved || editMode,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            color: Colors.black.withOpacity(.5),
+                                            child: const Icon(Icons.done, color: Colors.green),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Offstage(
+                                          offstage: !source.failed || editMode,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            color: Colors.black.withOpacity(.4),
+                                            child: const Icon(Icons.error, color: Colors.red),
                                           ),
                                         ),
                                       )
@@ -183,13 +231,21 @@ class _HomePageState extends State<HomePage> {
                                   bottom: downloading ? 0 : -60,
                                   right: 0,
                                   duration: const Duration(microseconds: 400),
-                                  child: Container(
-                                    color: Colors.black.withOpacity(.75),
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Text(
-                                      '图片下载中 $imageSaved / ${images.length}',
-                                      style: const TextStyle(color: Colors.white),
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Container(
+                                        color: Colors.black.withOpacity(.75),
+                                        padding: const EdgeInsets.all(12.0),
+                                        child: Text(
+                                          '图片下载中 $imageSaved / ${images.length}',
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                      LinearProgressIndicator(
+                                          value: imageSaved / images.length
+                                      )
+                                    ],
                                   ),
                                 )
                               ],
@@ -209,7 +265,7 @@ class _HomePageState extends State<HomePage> {
           )
         ],
       ),
-      floatingActionButton: images.isNotEmpty ? FloatingActionButton(
+      floatingActionButton: (images.isNotEmpty && !downloading) ? FloatingActionButton(
         onPressed: saveToGallery,
         tooltip: '保存到相册',
         child: const Icon(Icons.download),
