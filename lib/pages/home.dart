@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:clipboard/clipboard.dart';
@@ -7,6 +6,7 @@ import '../widget/entry.dart' as widgets;
 import '../tool/api.dart';
 import '../type/image.dart';
 import '../model/list.dart';
+import './preview.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
@@ -38,10 +38,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     readClipboard();
   }
 
+  Future<void> saveImageSource(ImageSource source) async {
+    if (!source.saved) {
+      try {
+        await GallerySaver.saveImage(source.url,
+            albumName: 'image-downloader');
+        source.saved = true;
+      } catch (err) {
+        source.failed = true;
+      }
+    }
+  }
+
   Future<void> saveToGallery() async {
     if (imageCount > 0) {
       if (imageListModel.items.every((ImageSource source) => source.saved)) {
-        Fluttertoast.showToast(msg: '所有的图片都已经保存', gravity: ToastGravity.BOTTOM);
+        showToast('所有的图片都已经保存');
         return;
       }
       setState(() {
@@ -49,15 +61,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         downloading = true;
       });
       for (final ImageSource source in imageListModel.items) {
-        if (!source.saved) {
-          try {
-            await GallerySaver.saveImage(source.url,
-                albumName: 'image-downloader');
-            source.saved = true;
-          } catch (err) {
-            source.failed = true;
-          }
-        }
+        saveImageSource(source);
         imageSaved++;
         setState(() {});
       }
@@ -75,36 +79,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         editMode = false;
         loading = true;
       });
-      List<String> list = await getImages(url);
-      for (int i = imageListModel.length - 1; i >= 0; i--) {
-        imageListModel.removeAt(i);
+      try {
+        List<String> list = await getImages(url);
+        if (list.isNotEmpty) {
+          for (int i = imageListModel.length - 1; i >= 0; i--) {
+            imageListModel.removeAt(i);
+          }
+          for (int j = 0; j < list.length; j++) {
+            imageListModel.insert(imageListModel.length, ImageSource(list[j]));
+          }
+          loading = false;
+          setState(() {});
+        }
+        else {
+          showToast('没有在链接地址找到图片');
+        }
       }
-      for (int j = 0; j < list.length; j++) {
-        imageListModel.insert(imageListModel.length, ImageSource(list[j]));
+      catch (err) {
+        showToast('链接地址访问出错');
       }
-      loading = false;
-      setState(() {});
     } else {
-      Fluttertoast.showToast(msg: '目标地址找不到图片', gravity: ToastGravity.BOTTOM);
+      showToast('链接地址不能为空');
     }
   }
 
-  Widget imageWidget(String url) {
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: BoxFit.cover,
-      placeholder: (BuildContext context, String url) => const Center(
-        child: SizedBox(
-          width: 30,
-          height: 30,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-          ),
-        ),
-      ),
-      errorWidget: (BuildContext context, String url, error) =>
-          const Icon(Icons.error, size: 36, color: Colors.orange),
-    );
+  void showToast(String msg) {
+    Fluttertoast.showToast(msg: msg, gravity: ToastGravity.BOTTOM);
   }
 
   Future<void> readClipboard() async {
@@ -182,19 +182,38 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       fit: StackFit.expand,
       children: [
         InkWell(
-          child: imageWidget(source.url),
+          child: widgets.CachedImage(url: source.url),
           onTap: () {
-            showDialog(
+            showGeneralDialog(
                 context: context,
-                builder: (BuildContext context) => Scaffold(
-                      appBar: AppBar(
-                        title: const Text('预览'),
-                      ),
-                      body: Center(
-                        child: imageWidget(source.url),
-                      ),
-                      backgroundColor: Colors.black.withOpacity(.4),
-                    ));
+                pageBuilder: (BuildContext context, Animation<double> start,
+                    Animation<double> end) => Preview(
+                  sources: imageListModel.items,
+                  initIndex: imageListModel.indexOf(source),
+                  onRemove: (int index) {
+                    setState(() {
+                      imageListModel.removeAt(index);
+                    });
+                  },
+                  onSave: (int index) async {
+                    ImageSource source = imageListModel.items[index];
+                    await saveImageSource(source);
+                    showToast('已成功保存到相册');
+                  },
+                ),
+                transitionBuilder: (BuildContext context,
+                    Animation<double> start,
+                    Animation<double> end,
+                    Widget child) {
+                  return ScaleTransition(
+                    scale: CurvedAnimation(
+                      parent: start,
+                      curve: Curves.easeInQuad
+                    ),
+                    child: child,
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 400));
           },
         ),
         Positioned(
@@ -216,7 +235,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
         _buildAlertWidget(!source.saved || editMode,
-            label: '下载成功', icon: const Icon(Icons.done, color: Colors.green)),
+            label: '下载成功', icon: const Icon(Icons.download_done, color: Colors.green)),
         _buildAlertWidget(!source.failed || editMode,
             label: '下载出错', icon: const Icon(Icons.error, color: Colors.red))
       ],
@@ -257,16 +276,38 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       body: Column(
         children: <Widget>[
           widgets.Card(
-            child: TextField(
-              controller: textEditingController,
-              decoration: const InputDecoration(
-                  border: OutlineInputBorder(), labelText: '链接地址'),
-              spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (String text) {
-                getImageList(text);
-              },
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: textEditingController,
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: '链接地址',
+                        hintText: '输入链接地址'
+                    ),
+                    spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: getImageList
+                  ),
+                ),
+                const SizedBox(
+                  width: 8,
+                ),
+                TextButton(
+                    onPressed: () => getImageList(textEditingController.text),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white
+                    ),
+                    child: Container(
+                      height: 48,
+                      alignment: Alignment.center,
+                      child: const Text('获取'),
+                    )
+                )
+              ],
             ),
           ),
           Expanded(
