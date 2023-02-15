@@ -61,7 +61,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         downloading = true;
       });
       for (final ImageSource source in imageListModel.items) {
-        saveImageSource(source);
+        await saveImageSource(source);
         imageSaved++;
         setState(() {});
       }
