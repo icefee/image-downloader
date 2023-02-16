@@ -39,16 +39,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     readClipboard();
   }
 
-  Future<void> saveImageSource(ImageSource source) async {
+  Future<bool> saveImageSource(ImageSource source) async {
     if (!source.saved) {
       try {
         await GallerySaver.saveImage(source.url, albumName: 'image-downloader');
         source.saved = true;
         source.failed = false;
+        return true;
       } catch (err) {
         source.failed = true;
+        return false;
       }
     }
+    return true;
   }
 
   Future<void> saveToGallery() async {
@@ -197,10 +200,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           imageListModel.removeAt(index);
                         });
                       },
-                      onSave: (int index) async {
-                        ImageSource source = imageListModel.items[index];
-                        await saveImageSource(source);
-                        showToast('已成功保存到相册');
+                      onSave: (ImageSource source) async {
+                        bool done = await saveImageSource(source);
+                        showToast(done ? '已成功保存到相册' : '下载失败, 可能是网络连接不畅');
+                        return done;
                       },
                     ),
                 transitionBuilder: (BuildContext context,

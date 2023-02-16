@@ -5,7 +5,7 @@ import '../type/image.dart';
 class Preview extends StatefulWidget {
   final List<ImageSource> sources;
   final int initIndex;
-  final Future<void> Function(int) onSave;
+  final Future<bool> Function(ImageSource) onSave;
   final ValueChanged<int> onRemove;
 
   const Preview(
@@ -36,6 +36,8 @@ class PreviewState extends State<Preview> {
     pageIndex = widget.initIndex;
     _controller = PageController(initialPage: pageIndex, keepPage: true);
   }
+
+  ImageSource get activeSource => sources[pageIndex];
 
   @override
   Widget build(BuildContext context) {
@@ -83,26 +85,28 @@ class PreviewState extends State<Preview> {
                               width: 20,
                             ),
                             AnimatedOpacity(
-                              opacity: (downloading || sources[pageIndex].saved)
-                                  ? .75
-                                  : 1,
+                              opacity:
+                                  (downloading || activeSource.saved) ? .75 : 1,
                               duration: const Duration(milliseconds: 400),
                               child: IconButton(
                                 onPressed: () async {
-                                  if (!downloading &&
-                                      !sources[pageIndex].saved) {
+                                  if (!downloading && !activeSource.saved) {
                                     setState(() {
                                       downloading = true;
                                     });
-                                    await widget.onSave(pageIndex);
-                                    setState(() {
-                                      sources[pageIndex].saved = true;
-                                      sources[pageIndex].failed = false;
-                                      downloading = false;
-                                    });
+                                    bool done =
+                                        await widget.onSave(activeSource);
+                                    if (done) {
+                                      activeSource.saved = true;
+                                      activeSource.failed = false;
+                                    } else {
+                                      activeSource.failed = true;
+                                    }
+                                    downloading = false;
+                                    setState(() {});
                                   }
                                 },
-                                icon: Icon(sources[pageIndex].saved
+                                icon: Icon(activeSource.saved
                                     ? Icons.download_done
                                     : Icons.download),
                                 color: Colors.green,
