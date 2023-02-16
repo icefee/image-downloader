@@ -5,7 +5,7 @@ import '../type/image.dart';
 class Preview extends StatefulWidget {
   final List<ImageSource> sources;
   final int initIndex;
-  final Future<bool> Function(ImageSource) onSave;
+  final Future<void> Function(ImageSource, int) onSave;
   final ValueChanged<int> onRemove;
 
   const Preview(
@@ -94,16 +94,12 @@ class PreviewState extends State<Preview> {
                                     setState(() {
                                       downloading = true;
                                     });
-                                    bool done =
-                                        await widget.onSave(activeSource);
-                                    if (done) {
-                                      activeSource.saved = true;
-                                      activeSource.failed = false;
-                                    } else {
-                                      activeSource.failed = true;
+                                    await widget.onSave(activeSource, pageIndex);
+                                    if (mounted) {
+                                      setState(() {
+                                        downloading = false;
+                                      });
                                     }
-                                    downloading = false;
-                                    setState(() {});
                                   }
                                 },
                                 icon: Icon(activeSource.saved

@@ -200,10 +200,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           imageListModel.removeAt(index);
                         });
                       },
-                      onSave: (ImageSource source) async {
+                      onSave: (ImageSource source, int index) async {
                         bool done = await saveImageSource(source);
+                        if (done) {
+                          ImageSource associatedSource =
+                              imageListModel.items[index];
+                          associatedSource.saved = true;
+                          associatedSource.failed = false;
+                        }
                         showToast(done ? '已成功保存到相册' : '下载失败, 可能是网络连接不畅');
-                        return done;
                       },
                     ),
                 transitionBuilder: (BuildContext context,
