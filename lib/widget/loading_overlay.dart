@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final bool open;
-  const LoadingOverlay({ super.key, required this.open });
+  final String label;
+  const LoadingOverlay({
+    super.key,
+    required this.open,
+    this.label = '加载中..'
+  });
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -24,8 +29,8 @@ class LoadingOverlay extends StatelessWidget {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                SizedBox(
+              children: [
+                const SizedBox(
                   width: 25,
                   height: 25,
                   child: CircularProgressIndicator(
@@ -33,8 +38,8 @@ class LoadingOverlay extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(left: 8.0),
-                  child: Text('加载中..', style: TextStyle(color: Colors.white)),
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Text(label, style: const TextStyle(color: Colors.white)),
                 )
               ],
             ),

@@ -21,7 +21,11 @@ class ImageGrid extends StatelessWidget {
           curve: removing ? Curves.easeInOut : Curves.bounceOut,
           parent: animation
       ),
-      child: child,
+      child: Container(
+        constraints: const BoxConstraints.expand(),
+        color: Colors.grey[300],
+        child: child
+      ),
     );
   }
 }

@@ -24,6 +24,8 @@ class PreviewState extends State<Preview> {
   late PageController _controller;
   late int pageIndex;
 
+  bool downloading = false;
+
   @override
   void initState() {
     // TODO: implement initState
@@ -80,19 +82,37 @@ class PreviewState extends State<Preview> {
                             const SizedBox(
                               width: 20,
                             ),
-                            IconButton(
-                              onPressed: () async {
-                                await widget.onSave(pageIndex);
-                                sources[pageIndex].saved = true;
-                                setState(() {});
-                              },
-                              icon: Icon(sources[pageIndex].saved
-                                  ? Icons.download_done
-                                  : Icons.download),
-                              color: Colors.green,
+                            AnimatedOpacity(
+                              opacity: (downloading || sources[pageIndex].saved)
+                                  ? .75
+                                  : 1,
+                              duration: const Duration(milliseconds: 400),
+                              child: IconButton(
+                                onPressed: () async {
+                                  if (!downloading &&
+                                      !sources[pageIndex].saved) {
+                                    setState(() {
+                                      downloading = true;
+                                    });
+                                    await widget.onSave(pageIndex);
+                                    setState(() {
+                                      sources[pageIndex].saved = true;
+                                      downloading = false;
+                                    });
+                                  }
+                                },
+                                icon: Icon(sources[pageIndex].saved
+                                    ? Icons.download_done
+                                    : Icons.download),
+                                color: Colors.green,
+                              ),
                             )
                           ],
-                        ))
+                        )),
+                    LoadingOverlay(
+                      open: downloading,
+                      label: '下载中..',
+                    )
                   ],
                 ))
             .toList(),

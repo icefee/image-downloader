@@ -20,7 +20,7 @@ class CachedImage extends StatelessWidget {
           width: 30,
           height: 30,
           child: CircularProgressIndicator(
-            strokeWidth: 2,
+            strokeWidth: 3
           ),
         ),
       ),

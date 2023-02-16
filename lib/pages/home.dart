@@ -42,8 +42,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> saveImageSource(ImageSource source) async {
     if (!source.saved) {
       try {
-        await GallerySaver.saveImage(source.url,
-            albumName: 'image-downloader');
+        await GallerySaver.saveImage(source.url, albumName: 'image-downloader');
         source.saved = true;
       } catch (err) {
         source.failed = true;
@@ -90,12 +89,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           for (int j = 0; j < list.length; j++) {
             imageListModel.insert(imageListModel.length, ImageSource(list[j]));
           }
-        }
-        else {
+        } else {
           showToast('没有在链接地址找到图片');
         }
-      }
-      catch (err) {
+      } catch (err) {
         showToast('链接地址访问出错');
       }
       setState(() {
@@ -190,29 +187,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             showGeneralDialog(
                 context: context,
                 pageBuilder: (BuildContext context, Animation<double> start,
-                    Animation<double> end) => Preview(
-                  sources: imageListModel.items,
-                  initIndex: imageListModel.indexOf(source),
-                  onRemove: (int index) {
-                    setState(() {
-                      imageListModel.removeAt(index);
-                    });
-                  },
-                  onSave: (int index) async {
-                    ImageSource source = imageListModel.items[index];
-                    await saveImageSource(source);
-                    showToast('已成功保存到相册');
-                  },
-                ),
+                        Animation<double> end) =>
+                    Preview(
+                      sources: imageListModel.items,
+                      initIndex: imageListModel.indexOf(source),
+                      onRemove: (int index) {
+                        setState(() {
+                          imageListModel.removeAt(index);
+                        });
+                      },
+                      onSave: (int index) async {
+                        ImageSource source = imageListModel.items[index];
+                        await saveImageSource(source);
+                        showToast('已成功保存到相册');
+                      },
+                    ),
                 transitionBuilder: (BuildContext context,
                     Animation<double> start,
                     Animation<double> end,
                     Widget child) {
                   return ScaleTransition(
                     scale: CurvedAnimation(
-                      parent: start,
-                      curve: Curves.easeInQuad
-                    ),
+                        parent: start, curve: Curves.easeInQuad),
                     child: child,
                   );
                 },
@@ -238,7 +234,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
         _buildAlertWidget(!source.saved || editMode,
-            label: '下载成功', icon: const Icon(Icons.download_done, color: Colors.green)),
+            label: '下载成功',
+            icon: const Icon(Icons.download_done, color: Colors.green)),
         _buildAlertWidget(!source.failed || editMode,
             label: '下载出错', icon: const Icon(Icons.error, color: Colors.red))
       ],
@@ -283,17 +280,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: textEditingController,
-                    decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: '链接地址',
-                        hintText: '输入链接地址'
-                    ),
-                    spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-                    keyboardType: TextInputType.url,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: getImageList
-                  ),
+                      controller: textEditingController,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: '链接地址',
+                          hintText: '输入链接地址'),
+                      spellCheckConfiguration:
+                          const SpellCheckConfiguration.disabled(),
+                      keyboardType: TextInputType.url,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: getImageList),
                 ),
                 const SizedBox(
                   width: 8,
@@ -301,15 +297,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 TextButton(
                     onPressed: () => getImageList(textEditingController.text),
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white
-                    ),
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white),
                     child: Container(
                       height: 48,
                       alignment: Alignment.center,
                       child: const Text('获取'),
-                    )
-                )
+                    ))
               ],
             ),
           ),
@@ -354,16 +348,27 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   child: Stack(
                                     clipBehavior: Clip.hardEdge,
                                     children: [
-                                      AnimatedGrid(
-                                        key: _gridKey,
-                                        controller: _gridController,
-                                        gridDelegate:
-                                            const SliverGridDelegateWithFixedCrossAxisCount(
-                                                crossAxisCount: 3,
-                                                mainAxisSpacing: 1.0,
-                                                crossAxisSpacing: 1.0),
-                                        initialItemCount: imageCount,
-                                        itemBuilder: _gridItemBuilder,
+                                      Theme(
+                                        data: Theme.of(context).copyWith(
+                                            scrollbarTheme: ScrollbarThemeData(
+                                                thumbColor:
+                                                    MaterialStateProperty.all(
+                                                        Colors.green
+                                                            .withOpacity(.7)))),
+                                        child: Scrollbar(
+                                          radius: const Radius.circular(3),
+                                          child: AnimatedGrid(
+                                            key: _gridKey,
+                                            controller: _gridController,
+                                            gridDelegate:
+                                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                                    crossAxisCount: 3,
+                                                    mainAxisSpacing: 1.0,
+                                                    crossAxisSpacing: 1.0),
+                                            initialItemCount: imageCount,
+                                            itemBuilder: _gridItemBuilder,
+                                          ),
+                                        ),
                                       ),
                                       AnimatedPositioned(
                                         left: 0,
