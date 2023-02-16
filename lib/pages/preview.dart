@@ -97,6 +97,7 @@ class PreviewState extends State<Preview> {
                                     await widget.onSave(pageIndex);
                                     setState(() {
                                       sources[pageIndex].saved = true;
+                                      sources[pageIndex].failed = false;
                                       downloading = false;
                                     });
                                   }

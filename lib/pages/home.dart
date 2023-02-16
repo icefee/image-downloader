@@ -44,6 +44,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       try {
         await GallerySaver.saveImage(source.url, albumName: 'image-downloader');
         source.saved = true;
+        source.failed = false;
       } catch (err) {
         source.failed = true;
       }
