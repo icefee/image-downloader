@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool downloading = false;
   TextEditingController textEditingController = TextEditingController(text: '');
   final GlobalKey<AnimatedGridState> _gridKey = GlobalKey<AnimatedGridState>();
+  final _gridController = ScrollController();
 
   String lastPasteText = '';
 
@@ -82,14 +83,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       try {
         List<String> list = await getImages(url);
         if (list.isNotEmpty) {
+          _gridController.jumpTo(0);
           for (int i = imageListModel.length - 1; i >= 0; i--) {
             imageListModel.removeAt(i);
           }
           for (int j = 0; j < list.length; j++) {
             imageListModel.insert(imageListModel.length, ImageSource(list[j]));
           }
-          loading = false;
-          setState(() {});
         }
         else {
           showToast('没有在链接地址找到图片');
@@ -98,6 +98,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       catch (err) {
         showToast('链接地址访问出错');
       }
+      setState(() {
+        loading = false;
+      });
     } else {
       showToast('链接地址不能为空');
     }
@@ -353,6 +356,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                     children: [
                                       AnimatedGrid(
                                         key: _gridKey,
+                                        controller: _gridController,
                                         gridDelegate:
                                             const SliverGridDelegateWithFixedCrossAxisCount(
                                                 crossAxisCount: 3,
