@@ -74,12 +74,7 @@ class PreviewState extends State<Preview> {
                                         await widget.onRemove(pageIndex);
                                     if (canRemove) {
                                       sources.removeAt(pageIndex);
-                                      if (pageIndex < sources.length) {
-                                        await _controller.nextPage(
-                                            duration: const Duration(
-                                                milliseconds: 250),
-                                            curve: Curves.linear);
-                                      } else {
+                                      if (pageIndex > 0) {
                                         await _controller.previousPage(
                                             duration: const Duration(
                                                 milliseconds: 250),
