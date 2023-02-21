@@ -6,7 +6,7 @@ class Preview extends StatefulWidget {
   final List<ImageSource> sources;
   final int initIndex;
   final Future<void> Function(ImageSource, int) onSave;
-  final ValueChanged<int> onRemove;
+  final Future<bool> Function(int) onRemove;
 
   const Preview(
       {super.key,
@@ -52,76 +52,90 @@ class PreviewState extends State<Preview> {
             icon: const Icon(Icons.close)),
         centerTitle: true,
       ),
-      body: PageView(
-        controller: _controller,
-        children: sources
-            .map((ImageSource source) => Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CachedImage(url: source.url),
-                    Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 20,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              onPressed: () async {
-                                widget.onRemove(pageIndex);
-                                sources.removeAt(pageIndex);
-                                if (pageIndex > 0) {
-                                  await _controller.previousPage(
-                                      duration:
-                                          const Duration(milliseconds: 250),
-                                      curve: Curves.linear);
-                                }
-                                setState(() {});
-                              },
-                              icon: const Icon(Icons.delete_outline),
-                              color: Colors.red,
-                            ),
-                            const SizedBox(
-                              width: 20,
-                            ),
-                            AnimatedOpacity(
-                              opacity:
-                                  (downloading || activeSource.saved) ? .75 : 1,
-                              duration: const Duration(milliseconds: 400),
-                              child: IconButton(
-                                onPressed: () async {
-                                  if (!downloading && !activeSource.saved) {
-                                    setState(() {
-                                      downloading = true;
-                                    });
-                                    await widget.onSave(activeSource, pageIndex);
-                                    if (mounted) {
-                                      setState(() {
-                                        downloading = false;
-                                      });
+      body: Stack(
+        children: [
+          PageView(
+            controller: _controller,
+            children: sources
+                .map((ImageSource source) => Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CachedImage(url: source.url),
+                        Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 20,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  onPressed: () async {
+                                    bool canRemove =
+                                        await widget.onRemove(pageIndex);
+                                    if (canRemove) {
+                                      sources.removeAt(pageIndex);
+                                      if (pageIndex < sources.length) {
+                                        await _controller.nextPage(
+                                            duration: const Duration(
+                                                milliseconds: 250),
+                                            curve: Curves.linear);
+                                      } else {
+                                        await _controller.previousPage(
+                                            duration: const Duration(
+                                                milliseconds: 250),
+                                            curve: Curves.linear);
+                                      }
+                                      setState(() {});
                                     }
-                                  }
-                                },
-                                icon: Icon(activeSource.saved
-                                    ? Icons.download_done
-                                    : Icons.download),
-                                color: Colors.green,
-                              ),
-                            )
-                          ],
-                        )),
-                    LoadingOverlay(
-                      open: downloading,
-                      label: '下载中..',
-                    )
-                  ],
-                ))
-            .toList(),
-        onPageChanged: (int nextPage) {
-          setState(() {
-            pageIndex = nextPage;
-          });
-        },
+                                  },
+                                  icon: const Icon(Icons.delete_outline),
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(
+                                  width: 20,
+                                ),
+                                AnimatedOpacity(
+                                  opacity: (downloading || activeSource.saved)
+                                      ? .75
+                                      : 1,
+                                  duration: const Duration(milliseconds: 400),
+                                  child: IconButton(
+                                    onPressed: () async {
+                                      if (!downloading && !activeSource.saved) {
+                                        setState(() {
+                                          downloading = true;
+                                        });
+                                        await widget.onSave(
+                                            activeSource, pageIndex);
+                                        if (mounted) {
+                                          setState(() {
+                                            downloading = false;
+                                          });
+                                        }
+                                      }
+                                    },
+                                    icon: Icon(activeSource.saved
+                                        ? Icons.download_done
+                                        : Icons.download),
+                                    color: Colors.green,
+                                  ),
+                                )
+                              ],
+                            ))
+                      ],
+                    ))
+                .toList(),
+            onPageChanged: (int nextPage) {
+              setState(() {
+                pageIndex = nextPage;
+              });
+            },
+          ),
+          LoadingOverlay(
+            open: downloading,
+            label: '下载中..',
+          )
+        ],
       ),
       backgroundColor: Colors.black.withOpacity(.75),
     );

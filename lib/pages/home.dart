@@ -24,6 +24,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   TextEditingController textEditingController = TextEditingController(text: '');
   final GlobalKey<AnimatedGridState> _gridKey = GlobalKey<AnimatedGridState>();
   final _gridController = ScrollController();
+  bool isAborted = false;
+  FocusNode textFieldFocus = FocusNode();
 
   String lastPasteText = '';
 
@@ -63,8 +65,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       setState(() {
         editMode = false;
         downloading = true;
+        isAborted = false;
       });
       for (final ImageSource source in imageListModel.items) {
+        if (isAborted) {
+          break;
+        }
         await saveImageSource(source);
         imageSaved++;
         setState(() {});
@@ -120,7 +126,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           context: context,
           builder: (BuildContext context) => AlertDialog(
                 title: const Text('从复制的链接查询'),
-                content: const Text('检测到你刚刚复制了一个链接, 是否立即查询?',
+                content: const Text('你刚刚复制了一个链接, 是否立即查询?',
                     maxLines: 2, softWrap: true),
                 actions: [
                   TextButton(
@@ -147,7 +153,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       left: 0,
       right: 0,
       bottom: show ? -40 : 0,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       child: Container(
         padding: const EdgeInsets.all(8),
         color: Colors.black.withOpacity(.5),
@@ -195,10 +202,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     Preview(
                       sources: imageListModel.items,
                       initIndex: imageListModel.indexOf(source),
-                      onRemove: (int index) {
+                      onRemove: (int index) async {
+                        if (downloading) {
+                          showToast('当前下载中, 无法删除图片');
+                          return false;
+                        }
                         setState(() {
                           imageListModel.removeAt(index);
                         });
+                        return true;
                       },
                       onSave: (ImageSource source, int index) async {
                         bool done = await saveImageSource(source);
@@ -289,16 +301,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               children: [
                 Expanded(
                   child: TextField(
-                      controller: textEditingController,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: '链接地址',
-                          hintText: '输入链接地址'),
-                      spellCheckConfiguration:
-                          const SpellCheckConfiguration.disabled(),
-                      keyboardType: TextInputType.url,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: getImageList),
+                    focusNode: textFieldFocus,
+                    controller: textEditingController,
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: '链接地址',
+                        hintText: '输入链接地址'),
+                    spellCheckConfiguration:
+                        const SpellCheckConfiguration.disabled(),
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: getImageList,
+                    onTapOutside: (PointerDownEvent event) {
+                      textFieldFocus.unfocus();
+                    },
+                  ),
                 ),
                 const SizedBox(
                   width: 8,
@@ -381,7 +398,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                       ),
                                       AnimatedPositioned(
                                         left: 0,
-                                        bottom: downloading ? 0 : -60,
+                                        bottom: (downloading && !isAborted)
+                                            ? 0
+                                            : -60,
                                         right: 0,
                                         duration:
                                             const Duration(microseconds: 400),
@@ -393,11 +412,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                               color:
                                                   Colors.black.withOpacity(.75),
                                               padding:
-                                                  const EdgeInsets.all(12.0),
-                                              child: Text(
-                                                '图片下载中 $imageSaved / $imageCount',
-                                                style: const TextStyle(
-                                                    color: Colors.white),
+                                                  const EdgeInsets.only(
+                                                      left: 8.0),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    '图片下载中 $imageSaved / $imageCount',
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  IconButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        isAborted = true;
+                                                      });
+                                                    },
+                                                    icon:
+                                                        const Icon(Icons.close),
+                                                    color: Colors.red,
+                                                  )
+                                                ],
                                               ),
                                             ),
                                             imageCount > 0
@@ -425,6 +462,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   )),
               widgets.LoadingOverlay(
                 open: loading,
+                label: '获取中..',
               )
             ],
           ))
