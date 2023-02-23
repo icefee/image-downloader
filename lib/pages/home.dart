@@ -28,6 +28,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   FocusNode textFieldFocus = FocusNode();
 
   String lastPasteText = '';
+  int lastRequestExitTime = 0;
 
   @override
   void initState() {
@@ -289,192 +290,208 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      backgroundColor: Colors.grey[200],
-      body: Column(
-        children: <Widget>[
-          widgets.Card(
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    focusNode: textFieldFocus,
-                    controller: textEditingController,
-                    decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: '链接地址',
-                        hintText: '输入链接地址'),
-                    spellCheckConfiguration:
-                        const SpellCheckConfiguration.disabled(),
-                    keyboardType: TextInputType.url,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: getImageList,
-                    onTapOutside: (PointerDownEvent event) {
-                      textFieldFocus.unfocus();
-                    },
-                  ),
-                ),
-                const SizedBox(
-                  width: 8,
-                ),
-                TextButton(
-                    onPressed: () => getImageList(textEditingController.text),
-                    style: TextButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white),
-                    child: Container(
-                      height: 48,
-                      alignment: Alignment.center,
-                      child: const Text('获取'),
-                    ))
-              ],
-            ),
+    return WillPopScope(
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(widget.title),
           ),
-          Expanded(
-              child: Stack(
-            children: [
+          backgroundColor: Colors.grey[200],
+          body: Column(
+            children: <Widget>[
               widgets.Card(
-                  margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  child: Stack(
-                    children: [
-                      AnimatedOpacity(
-                        opacity: imageCount > 0 ? 1 : 0,
-                        duration: const Duration(milliseconds: 200),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        focusNode: textFieldFocus,
+                        controller: textEditingController,
+                        decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: '链接地址',
+                            hintText: '输入链接地址'),
+                        spellCheckConfiguration:
+                            const SpellCheckConfiguration.disabled(),
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: getImageList,
+                        onTapOutside: (PointerDownEvent event) {
+                          textFieldFocus.unfocus();
+                        },
+                      ),
+                    ),
+                    const SizedBox(
+                      width: 8,
+                    ),
+                    TextButton(
+                        onPressed: () =>
+                            getImageList(textEditingController.text),
+                        style: TextButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white),
                         child: Container(
-                            constraints: const BoxConstraints.expand(),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(5.0),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text('获取到$imageCount张图片'),
-                                      IconButton(
-                                          onPressed: () {
-                                            if (!downloading) {
-                                              setState(() {
-                                                editMode = !editMode;
-                                              });
-                                            }
-                                          },
-                                          color: Colors.green,
-                                          icon: Icon(editMode
-                                              ? Icons.done
-                                              : Icons.edit_note))
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Stack(
-                                    clipBehavior: Clip.hardEdge,
-                                    children: [
-                                      Theme(
-                                        data: Theme.of(context).copyWith(
-                                            scrollbarTheme: ScrollbarThemeData(
-                                                thumbColor:
-                                                    MaterialStateProperty.all(
-                                                        Colors.green
-                                                            .withOpacity(.7)))),
-                                        child: Scrollbar(
-                                          radius: const Radius.circular(3),
-                                          child: AnimatedGrid(
-                                            key: _gridKey,
-                                            controller: _gridController,
-                                            gridDelegate:
-                                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                                    crossAxisCount: 3,
-                                                    mainAxisSpacing: 1.0,
-                                                    crossAxisSpacing: 1.0),
-                                            initialItemCount: imageCount,
-                                            itemBuilder: _gridItemBuilder,
-                                          ),
-                                        ),
+                          height: 48,
+                          alignment: Alignment.center,
+                          child: const Text('获取'),
+                        ))
+                  ],
+                ),
+              ),
+              Expanded(
+                  child: Stack(
+                children: [
+                  widgets.Card(
+                      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                      child: Stack(
+                        children: [
+                          AnimatedOpacity(
+                            opacity: imageCount > 0 ? 1 : 0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Container(
+                                constraints: const BoxConstraints.expand(),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(5.0),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('获取到$imageCount张图片'),
+                                          IconButton(
+                                              onPressed: () {
+                                                if (!downloading) {
+                                                  setState(() {
+                                                    editMode = !editMode;
+                                                  });
+                                                }
+                                              },
+                                              color: Colors.green,
+                                              icon: Icon(editMode
+                                                  ? Icons.done
+                                                  : Icons.edit_note))
+                                        ],
                                       ),
-                                      AnimatedPositioned(
-                                        left: 0,
-                                        bottom: (downloading && !isAborted)
-                                            ? 0
-                                            : -60,
-                                        right: 0,
-                                        duration:
-                                            const Duration(microseconds: 400),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            Container(
-                                              color:
-                                                  Colors.black.withOpacity(.75),
-                                              padding:
-                                                  const EdgeInsets.only(
-                                                      left: 8.0),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  Text(
-                                                    '图片下载中 $imageSaved / $imageCount',
-                                                    style: const TextStyle(
-                                                        color: Colors.white),
-                                                  ),
-                                                  IconButton(
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        isAborted = true;
-                                                      });
-                                                    },
-                                                    icon:
-                                                        const Icon(Icons.close),
-                                                    color: Colors.red,
-                                                  )
-                                                ],
+                                    ),
+                                    Expanded(
+                                      child: Stack(
+                                        clipBehavior: Clip.hardEdge,
+                                        children: [
+                                          Theme(
+                                            data: Theme.of(context).copyWith(
+                                                scrollbarTheme:
+                                                    ScrollbarThemeData(
+                                                        thumbColor:
+                                                            MaterialStateProperty
+                                                                .all(Colors
+                                                                    .green
+                                                                    .withOpacity(
+                                                                        .7)))),
+                                            child: Scrollbar(
+                                              radius: const Radius.circular(3),
+                                              child: AnimatedGrid(
+                                                key: _gridKey,
+                                                controller: _gridController,
+                                                gridDelegate:
+                                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                                        crossAxisCount: 3,
+                                                        mainAxisSpacing: 1.0,
+                                                        crossAxisSpacing: 1.0),
+                                                initialItemCount: imageCount,
+                                                itemBuilder: _gridItemBuilder,
                                               ),
                                             ),
-                                            imageCount > 0
-                                                ? LinearProgressIndicator(
-                                                    value:
-                                                        imageSaved / imageCount)
-                                                : Container()
-                                          ],
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                )
-                              ],
-                            )),
-                      ),
-                      AnimatedOpacity(
-                        opacity: imageCount > 0 ? 0 : 1,
-                        duration: const Duration(milliseconds: 200),
-                        child: const Center(
-                          child: Text('输入网址获取图片'),
-                        ),
-                      )
-                    ],
-                  )),
-              widgets.LoadingOverlay(
-                open: loading,
-                label: '获取中..',
-              )
+                                          ),
+                                          AnimatedPositioned(
+                                            left: 0,
+                                            bottom: (downloading && !isAborted)
+                                                ? 0
+                                                : -60,
+                                            right: 0,
+                                            duration: const Duration(
+                                                microseconds: 400),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: [
+                                                Container(
+                                                  color: Colors.black
+                                                      .withOpacity(.75),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 8.0),
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        '图片下载中 $imageSaved / $imageCount',
+                                                        style: const TextStyle(
+                                                            color:
+                                                                Colors.white),
+                                                      ),
+                                                      IconButton(
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            isAborted = true;
+                                                          });
+                                                        },
+                                                        icon: const Icon(
+                                                            Icons.close),
+                                                        color: Colors.red,
+                                                      )
+                                                    ],
+                                                  ),
+                                                ),
+                                                imageCount > 0
+                                                    ? LinearProgressIndicator(
+                                                        value: imageSaved /
+                                                            imageCount)
+                                                    : Container()
+                                              ],
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                )),
+                          ),
+                          AnimatedOpacity(
+                            opacity: imageCount > 0 ? 0 : 1,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Center(
+                              child: Text('输入网址获取图片'),
+                            ),
+                          )
+                        ],
+                      )),
+                  widgets.LoadingOverlay(
+                    open: loading,
+                    label: '获取中..',
+                  )
+                ],
+              ))
             ],
-          ))
-        ],
-      ),
-      floatingActionButton: (imageCount > 0 && !downloading)
-          ? FloatingActionButton(
-              onPressed: saveToGallery,
-              tooltip: '保存到相册',
-              child: const Icon(Icons.download),
-            )
-          : null, // This trailing comma makes auto-formatting nicer for build methods.
-    );
+          ),
+          floatingActionButton: (imageCount > 0 && !downloading)
+              ? FloatingActionButton(
+                  onPressed: saveToGallery,
+                  tooltip: '保存到相册',
+                  child: const Icon(Icons.download),
+                )
+              : null, // This trailing comma makes auto-formatting nicer for build methods.
+        ),
+        onWillPop: () async {
+          int nowTime = DateTime.now().millisecondsSinceEpoch;
+          if (nowTime - lastRequestExitTime < 2e3) {
+            return true;
+          } else {
+            showToast('再按一次返回退出');
+            lastRequestExitTime = nowTime;
+            return false;
+          }
+        });
   }
 }
