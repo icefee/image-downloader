@@ -73,14 +73,18 @@ class PreviewState extends State<Preview> {
                                     bool canRemove =
                                         await widget.onRemove(pageIndex);
                                     if (canRemove) {
-                                      sources.removeAt(pageIndex);
-                                      if (pageIndex > 0) {
-                                        await _controller.previousPage(
-                                            duration: const Duration(
-                                                milliseconds: 250),
-                                            curve: Curves.linear);
+                                      if (sources.length > 1) {
+                                        sources.removeAt(pageIndex);
+                                        if (pageIndex > 0) {
+                                          await _controller.previousPage(
+                                              duration: const Duration(
+                                                  milliseconds: 250),
+                                              curve: Curves.linear);
+                                        }
+                                        setState(() {});
+                                      } else if (mounted) {
+                                        Navigator.pop(context);
                                       }
-                                      setState(() {});
                                     }
                                   },
                                   icon: const Icon(Icons.delete_outline),
@@ -112,7 +116,7 @@ class PreviewState extends State<Preview> {
                                     icon: Icon(activeSource.saved
                                         ? Icons.download_done
                                         : Icons.download),
-                                    color: Colors.green,
+                                    color: Colors.deepOrange,
                                   ),
                                 )
                               ],

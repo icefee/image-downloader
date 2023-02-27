@@ -14,7 +14,7 @@ class App extends StatelessWidget {
     return MaterialApp(
       title: '图片下载器',
       theme: ThemeData(
-        primarySwatch: Colors.green,
+        primarySwatch: Colors.deepOrange,
       ),
       home: const HomePage(title: '图片下载器'),
       localizationsDelegates: const [

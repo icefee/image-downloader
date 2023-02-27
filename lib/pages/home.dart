@@ -257,7 +257,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
         _buildAlertWidget(!source.saved || editMode,
             label: '下载成功',
-            icon: const Icon(Icons.download_done, color: Colors.green)),
+            icon: const Icon(Icons.download_done, color: Colors.deepOrange)),
         _buildAlertWidget(!source.failed || editMode,
             label: '下载出错', icon: const Icon(Icons.error, color: Colors.red))
       ],
@@ -326,7 +326,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         onPressed: () =>
                             getImageList(textEditingController.text),
                         style: TextButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: Colors.deepOrange,
                             foregroundColor: Colors.white),
                         child: Container(
                           height: 48,
@@ -366,7 +366,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   });
                                                 }
                                               },
-                                              color: Colors.green,
+                                              color: Colors.deepOrange,
                                               icon: Icon(editMode
                                                   ? Icons.done
                                                   : Icons.edit_note))
@@ -384,7 +384,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                         thumbColor:
                                                             MaterialStateProperty
                                                                 .all(Colors
-                                                                    .green
+                                                                    .deepOrange
                                                                     .withOpacity(
                                                                         .7)))),
                                             child: Scrollbar(
