@@ -6,7 +6,7 @@ class Preview extends StatefulWidget {
   final List<ImageSource> sources;
   final int initIndex;
   final Future<void> Function(ImageSource, int) onSave;
-  final Future<bool> Function(int) onRemove;
+  final bool Function(int) onRemove;
 
   const Preview(
       {super.key,
@@ -70,8 +70,7 @@ class PreviewState extends State<Preview> {
                               children: [
                                 IconButton(
                                   onPressed: () async {
-                                    bool canRemove =
-                                        await widget.onRemove(pageIndex);
+                                    bool canRemove = widget.onRemove(pageIndex);
                                     if (canRemove) {
                                       if (sources.length > 1) {
                                         sources.removeAt(pageIndex);

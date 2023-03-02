@@ -203,7 +203,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     Preview(
                       sources: imageListModel.items,
                       initIndex: imageListModel.indexOf(source),
-                      onRemove: (int index) async {
+                      onRemove: (int index) {
                         if (downloading) {
                           showToast('当前下载中, 无法删除图片');
                           return false;
@@ -214,6 +214,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         return true;
                       },
                       onSave: (ImageSource source, int index) async {
+                        if (downloading) {
+                          showToast('当前有下载任务进行中, 请等待下载完成');
+                          return;
+                        }
                         bool done = await saveImageSource(source);
                         if (done) {
                           ImageSource associatedSource =
@@ -435,6 +439,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                         onPressed: () {
                                                           setState(() {
                                                             isAborted = true;
+                                                            loading = false;
                                                           });
                                                         },
                                                         icon: const Icon(
