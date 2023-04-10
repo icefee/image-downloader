@@ -6,7 +6,7 @@ Future<List<String>> getImages(String url) async {
   Iterable<RegExpMatch> matches = RegExp(
           r'(https?://)?[a-zA-Z\d\u4e00-\u9fa5-._/@%]+?\.((jpe?|pn)g|webp)',
           caseSensitive: false)
-      .allMatches(response.body);
+      .allMatches(response.body.replaceAll(RegExp(r'\\/'), '/'));
   List<String> images = matches.map((m) => m.group(0)!).toSet().toList();
   Uri uri = Uri.parse(url);
   for (int i = 0; i < images.length; i++) {
