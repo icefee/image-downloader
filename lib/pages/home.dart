@@ -45,7 +45,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<bool> saveImageSource(ImageSource source) async {
     if (!source.saved) {
       try {
-        await GallerySaver.saveImage(source.url, albumName: 'image-downloader');
+        await GallerySaver.saveImage(
+          source.url,
+          albumName: 'image-downloader',
+          headers: {
+            'referer': Uri.parse(source.url).origin
+          }
+        );
         source.saved = true;
         source.failed = false;
         return true;

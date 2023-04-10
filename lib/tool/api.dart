@@ -3,13 +3,31 @@ import 'package:http/http.dart';
 
 Future<List<String>> getImages(String url) async {
   Response response = await get(Uri.parse(url));
-  Iterable<RegExpMatch> matches = RegExp(r'https?://[a-zA-Z\d(-|_|/)]+?\.jpe?g', caseSensitive: false).allMatches(response.body);
-  return matches.map((m) => m.group(0)!).toSet().toList();
+  Iterable<RegExpMatch> matches = RegExp(
+          r'(https?://)?[a-zA-Z\d\u4e00-\u9fa5-._/@%]+?\.((jpe?|pn)g|webp)',
+          caseSensitive: false)
+      .allMatches(response.body);
+  List<String> images = matches.map((m) => m.group(0)!).toSet().toList();
+  Uri uri = Uri.parse(url);
+  for (int i = 0; i < images.length; i++) {
+    if (!images[i].startsWith(RegExp(r'https?://', caseSensitive: false))) {
+      if (images[i].startsWith('/')) {
+        if (images[i].startsWith('//')) {
+          images[i] = '${uri.scheme}:${images[i]}';
+        } else {
+          images[i] = uri.origin + images[i];
+        }
+      } else {
+        images[i] =
+            uri.origin + (uri.path.isNotEmpty ? uri.path : '/') + images[i];
+      }
+    }
+  }
+  return images;
 }
 
-Future<void> downloadImage(String url, String path, { Function(double)? onProcess }) async {
-  // RegExpMatch? match = RegExp(r'[^/]+?\.jpe?g', caseSensitive: false).firstMatch(url);
-  // String filename = match?.group(0) ?? '${DateTime.now().millisecondsSinceEpoch}.jpg';
+Future<void> downloadImage(String url, String path,
+    {Function(double)? onProcess}) async {
   HttpClient client = HttpClient();
   Uri target = Uri.parse(url);
   HttpClientRequest request = await client.getUrl(target);
