@@ -8,12 +8,7 @@ class Preview extends StatefulWidget {
   final Future<void> Function(ImageSource, int) onSave;
   final bool Function(int) onRemove;
 
-  const Preview(
-      {super.key,
-      required this.sources,
-      this.initIndex = 0,
-      required this.onSave,
-      required this.onRemove});
+  const Preview({super.key, required this.sources, this.initIndex = 0, required this.onSave, required this.onRemove});
 
   @override
   State<StatefulWidget> createState() => PreviewState();
@@ -31,8 +26,7 @@ class PreviewState extends State<Preview> {
     // TODO: implement initState
     super.initState();
 
-    sources =
-        List.generate(widget.sources.length, (index) => widget.sources[index]);
+    sources = List.generate(widget.sources.length, (index) => widget.sources[index]);
     pageIndex = widget.initIndex;
     _controller = PageController(initialPage: pageIndex, keepPage: true);
   }
@@ -47,9 +41,7 @@ class PreviewState extends State<Preview> {
         title: Text('预览 - ${pageIndex + 1} / ${sources.length}'),
         backgroundColor: Colors.transparent,
         shadowColor: Colors.transparent,
-        leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close)),
+        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
         centerTitle: true,
       ),
       body: Stack(
@@ -76,9 +68,7 @@ class PreviewState extends State<Preview> {
                                         sources.removeAt(pageIndex);
                                         if (pageIndex > 0) {
                                           await _controller.previousPage(
-                                              duration: const Duration(
-                                                  milliseconds: 250),
-                                              curve: Curves.linear);
+                                              duration: const Duration(milliseconds: 250), curve: Curves.linear);
                                         }
                                         setState(() {});
                                       } else if (mounted) {
@@ -93,9 +83,7 @@ class PreviewState extends State<Preview> {
                                   width: 20,
                                 ),
                                 AnimatedOpacity(
-                                  opacity: (downloading || activeSource.saved)
-                                      ? .75
-                                      : 1,
+                                  opacity: (downloading || activeSource.saved) ? .75 : 1,
                                   duration: const Duration(milliseconds: 400),
                                   child: IconButton(
                                     onPressed: () async {
@@ -103,8 +91,7 @@ class PreviewState extends State<Preview> {
                                         setState(() {
                                           downloading = true;
                                         });
-                                        await widget.onSave(
-                                            activeSource, pageIndex);
+                                        await widget.onSave(activeSource, pageIndex);
                                         if (mounted) {
                                           setState(() {
                                             downloading = false;
@@ -112,9 +99,7 @@ class PreviewState extends State<Preview> {
                                         }
                                       }
                                     },
-                                    icon: Icon(activeSource.saved
-                                        ? Icons.download_done
-                                        : Icons.download),
+                                    icon: Icon(activeSource.saved ? Icons.download_done : Icons.download),
                                     color: Colors.deepOrange,
                                   ),
                                 )
