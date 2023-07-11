@@ -4,7 +4,7 @@ import 'package:http/http.dart';
 Future<List<String>> getImages(String url) async {
   Response response = await get(Uri.parse(url));
   Iterable<RegExpMatch> matches =
-      RegExp(r'(https?://)?[a-zA-Z\d\u4e00-\u9fa5-._/@%?=]+?\.((jpe?|pn)g|webp)', caseSensitive: false)
+      RegExp(r'(https?://)?[\w\u4e00-\u9fa5-./@%?=]+?\.((jpe?|pn)g|webp)', caseSensitive: false)
           .allMatches(response.body.replaceAll(RegExp(r'\\/'), '/'));
   List<String> images = matches.map((m) => m.group(0)!).toSet().toList();
   Uri uri = Uri.parse(url);
