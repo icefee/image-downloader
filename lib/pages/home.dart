@@ -473,10 +473,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 )),
                           ),
                           AnimatedOpacity(
-                            opacity: (imageCount > 0 || !loading) ? 0 : 1,
+                            opacity: (imageCount > 0 || loading) ? 0 : 1,
                             duration: const Duration(milliseconds: 200),
-                            child: const Center(
-                              child: Text('输入网址获取图片'),
+                            child: Center(
+                              child: Text('输入网址获取图片',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey.shade600)),
                             ),
                           )
                         ],

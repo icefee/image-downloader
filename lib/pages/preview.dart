@@ -46,7 +46,8 @@ class PreviewState extends State<Preview> {
     // TODO: implement build
     return Scaffold(
       appBar: AppBar(
-        title: Text('预览 - ${pageIndex + 1} / ${sources.length}'),
+        title: Text('预览 - ${pageIndex + 1} / ${sources.length}',
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.transparent,
         shadowColor: Colors.transparent,
         leading: IconButton(
