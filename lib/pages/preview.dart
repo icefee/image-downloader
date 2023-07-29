@@ -5,10 +5,17 @@ import '../type/image.dart';
 class Preview extends StatefulWidget {
   final List<ImageSource> sources;
   final int initIndex;
+  final String Function(String)? urlTransform;
   final Future<void> Function(ImageSource, int) onSave;
   final bool Function(int) onRemove;
 
-  const Preview({super.key, required this.sources, this.initIndex = 0, required this.onSave, required this.onRemove});
+  const Preview(
+      {super.key,
+      required this.sources,
+      this.initIndex = 0,
+      this.urlTransform,
+      required this.onSave,
+      required this.onRemove});
 
   @override
   State<StatefulWidget> createState() => PreviewState();
@@ -26,7 +33,8 @@ class PreviewState extends State<Preview> {
     // TODO: implement initState
     super.initState();
 
-    sources = List.generate(widget.sources.length, (index) => widget.sources[index]);
+    sources =
+        List.generate(widget.sources.length, (index) => widget.sources[index]);
     pageIndex = widget.initIndex;
     _controller = PageController(initialPage: pageIndex, keepPage: true);
   }
@@ -41,7 +49,9 @@ class PreviewState extends State<Preview> {
         title: Text('预览 - ${pageIndex + 1} / ${sources.length}'),
         backgroundColor: Colors.transparent,
         shadowColor: Colors.transparent,
-        leading: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+        leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close)),
         centerTitle: true,
       ),
       body: Stack(
@@ -52,7 +62,10 @@ class PreviewState extends State<Preview> {
                 .map((ImageSource source) => Stack(
                       alignment: Alignment.center,
                       children: [
-                        CachedImage(url: source.url),
+                        CachedImage(
+                            url: widget.urlTransform != null
+                                ? widget.urlTransform!(source.url)
+                                : source.url),
                         Positioned(
                             left: 0,
                             right: 0,
@@ -60,49 +73,55 @@ class PreviewState extends State<Preview> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                IconButton(
-                                  onPressed: () async {
-                                    bool canRemove = widget.onRemove(pageIndex);
-                                    if (canRemove) {
-                                      if (sources.length > 1) {
-                                        sources.removeAt(pageIndex);
-                                        if (pageIndex > 0) {
-                                          await _controller.previousPage(
-                                              duration: const Duration(milliseconds: 250), curve: Curves.linear);
+                                AnimatedOpacity(
+                                  opacity: (downloading || activeSource.saved)
+                                      ? .75
+                                      : 1,
+                                  duration: const Duration(milliseconds: 400),
+                                  child: IconButton(
+                                      onPressed: () async {
+                                        if (!downloading &&
+                                            !activeSource.saved) {
+                                          setState(() {
+                                            downloading = true;
+                                          });
+                                          await widget.onSave(
+                                              activeSource, pageIndex);
+                                          if (mounted) {
+                                            setState(() {
+                                              downloading = false;
+                                            });
+                                          }
                                         }
-                                        setState(() {});
-                                      } else if (mounted) {
-                                        Navigator.pop(context);
-                                      }
-                                    }
-                                  },
-                                  icon: const Icon(Icons.delete_outline),
-                                  color: Colors.red,
+                                      },
+                                      icon: Icon(activeSource.saved
+                                          ? Icons.download_done
+                                          : Icons.download)),
                                 ),
                                 const SizedBox(
                                   width: 20,
                                 ),
-                                AnimatedOpacity(
-                                  opacity: (downloading || activeSource.saved) ? .75 : 1,
-                                  duration: const Duration(milliseconds: 400),
-                                  child: IconButton(
+                                IconButton(
                                     onPressed: () async {
-                                      if (!downloading && !activeSource.saved) {
-                                        setState(() {
-                                          downloading = true;
-                                        });
-                                        await widget.onSave(activeSource, pageIndex);
-                                        if (mounted) {
-                                          setState(() {
-                                            downloading = false;
-                                          });
+                                      bool canRemove =
+                                          widget.onRemove(pageIndex);
+                                      if (canRemove) {
+                                        if (sources.length > 1) {
+                                          sources.removeAt(pageIndex);
+                                          if (pageIndex > 0) {
+                                            await _controller.previousPage(
+                                                duration: const Duration(
+                                                    milliseconds: 250),
+                                                curve: Curves.linear);
+                                          }
+                                          setState(() {});
+                                        } else if (mounted) {
+                                          Navigator.pop(context);
                                         }
                                       }
                                     },
-                                    icon: Icon(activeSource.saved ? Icons.download_done : Icons.download),
-                                    color: Colors.deepOrange,
-                                  ),
-                                )
+                                    icon: const Icon(Icons.delete_outline,
+                                        color: Colors.red))
                               ],
                             ))
                       ],

@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:clipboard/clipboard.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../widget/entry.dart' as widgets;
+import '../tool/const.dart';
+import '../tool/theme.dart';
 import '../tool/api.dart';
 import '../type/image.dart';
 import '../model/list.dart';
+import '../model/setting.dart';
 import './preview.dart';
+import './setting.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
@@ -30,22 +35,43 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   String lastPasteText = '';
   int lastRequestExitTime = 0;
 
+  SettingParams settingParams = SettingParams();
+
+  final storage = const FlutterSecureStorage();
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
 
-    imageListModel = ListModel<ImageSource>(listKey: _gridKey, removedItemBuilder: _buildRemovedItem);
+    imageListModel = ListModel<ImageSource>(
+        listKey: _gridKey, removedItemBuilder: _buildRemovedItem);
 
     WidgetsBinding.instance.addObserver(this);
+
     readClipboard();
+    restoreSetting();
+  }
+
+  String getProxyUrl(String url) {
+    return settingParams.enableProxy ? proxyUrl(url) : url;
+  }
+
+  Future<void> restoreSetting() async {
+    String? store = await storage.read(key: Keys.settingStorage);
+    if (store != null) {
+      settingParams = SettingParams.fromJson(store);
+    }
   }
 
   Future<bool> saveImageSource(ImageSource source) async {
     if (!source.saved) {
       try {
-        await GallerySaver.saveImage(source.url,
-            albumName: 'image-downloader', headers: {'referer': Uri.parse(source.url).origin});
+        await GallerySaver.saveImage(getProxyUrl(source.url),
+            albumName: Keys.albumName,
+            headers: settingParams.enableProxy
+                ? null
+                : {'referer': Uri.parse(source.url).origin});
         source.saved = true;
         source.failed = false;
         return true;
@@ -84,14 +110,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> getImageList(String text) async {
-    String url = text.trimLeft().trimRight();
+    String url = text.trim();
     if (url.isNotEmpty) {
       setState(() {
         editMode = false;
         loading = true;
       });
       try {
-        List<String> list = await getImages(url);
+        List<String> list = await getImages(getProxyUrl(url));
         if (list.isNotEmpty) {
           _gridController.jumpTo(0);
           for (int i = imageListModel.length - 1; i >= 0; i--) {
@@ -120,12 +146,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> readClipboard() async {
     String pasteText = await FlutterClipboard.paste();
-    if (pasteText.startsWith('http') && pasteText != lastPasteText && context.mounted) {
+    if (pasteText.startsWith('http') &&
+        pasteText != lastPasteText &&
+        context.mounted) {
       showDialog(
           context: context,
           builder: (BuildContext context) => AlertDialog(
                 title: const Text('从复制的链接查询'),
-                content: const Text('你刚刚复制了一个链接, 是否立即查询?', maxLines: 2, softWrap: true),
+                content: const Text('你刚刚复制了一个链接, 是否立即查询?',
+                    maxLines: 2, softWrap: true),
                 actions: [
                   TextButton(
                       onPressed: () {
@@ -135,7 +164,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       },
                       child: const Text('查询链接')),
                   TextButton(
-                      style: TextButton.styleFrom(foregroundColor: Colors.grey.shade600),
+                      style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey.shade600),
                       onPressed: () => Navigator.pop(context),
                       child: const Text('取消'))
                 ],
@@ -144,7 +174,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  Widget _buildAlertWidget(bool show, {required String label, required Icon icon}) {
+  Widget _buildAlertWidget(bool show,
+      {required String label, required Icon icon}) {
     return AnimatedPositioned(
       left: 0,
       right: 0,
@@ -189,13 +220,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       fit: StackFit.expand,
       children: [
         InkWell(
-          child: widgets.CachedImage(url: source.url),
+          child: widgets.CachedImage(url: getProxyUrl(source.url)),
           onTap: () {
             showGeneralDialog(
                 context: context,
-                pageBuilder: (BuildContext context, Animation<double> start, Animation<double> end) => Preview(
+                pageBuilder: (BuildContext context, Animation<double> start,
+                        Animation<double> end) =>
+                    Preview(
                       sources: imageListModel.items,
                       initIndex: imageListModel.indexOf(source),
+                      urlTransform: getProxyUrl,
                       onRemove: (int index) {
                         if (downloading) {
                           showToast('当前下载中, 无法删除图片');
@@ -213,17 +247,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         }
                         bool done = await saveImageSource(source);
                         if (done) {
-                          ImageSource associatedSource = imageListModel.items[index];
+                          ImageSource associatedSource =
+                              imageListModel.items[index];
                           associatedSource.saved = true;
                           associatedSource.failed = false;
                         }
                         showToast(done ? '已成功保存到相册' : '下载失败, 可能是网络连接不畅');
                       },
                     ),
-                transitionBuilder:
-                    (BuildContext context, Animation<double> start, Animation<double> end, Widget child) {
+                transitionBuilder: (BuildContext context,
+                    Animation<double> start,
+                    Animation<double> end,
+                    Widget child) {
                   return ScaleTransition(
-                    scale: CurvedAnimation(parent: start, curve: Curves.easeInQuad),
+                    scale: CurvedAnimation(
+                        parent: start, curve: Curves.easeInQuad),
                     child: child,
                   );
                 },
@@ -244,25 +282,33 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 child: Container(
                     constraints: const BoxConstraints.expand(),
                     color: Colors.black.withOpacity(.5),
-                    child: const Icon(Icons.delete_outline, color: Colors.red, size: 36))),
+                    child: const Icon(Icons.delete_outline,
+                        color: Colors.red, size: 36))),
           ),
         ),
         _buildAlertWidget(!source.saved || editMode,
-            label: '下载成功', icon: const Icon(Icons.download_done, color: Colors.deepOrange)),
-        _buildAlertWidget(!source.failed || editMode, label: '下载出错', icon: const Icon(Icons.error, color: Colors.red))
+            label: '下载成功',
+            icon: Icon(Icons.download_done, color: AppTheme.themeColor)),
+        _buildAlertWidget(!source.failed || editMode,
+            label: '下载出错', icon: const Icon(Icons.error, color: Colors.red))
       ],
     );
   }
 
-  Widget _gridItemBuilder(BuildContext context, int index, Animation<double> animation) {
-    return widgets.ImageGrid(animation: animation, child: _buildGrid(imageListModel[index], () => onRemove(index)));
+  Widget _gridItemBuilder(
+      BuildContext context, int index, Animation<double> animation) {
+    return widgets.ImageGrid(
+        animation: animation,
+        child: _buildGrid(imageListModel[index], () => onRemove(index)));
   }
 
-  Widget _buildRemovedItem(ImageSource source, BuildContext context, Animation<double> animation) {
+  Widget _buildRemovedItem(
+      ImageSource source, BuildContext context, Animation<double> animation) {
     return widgets.ImageGrid(
         animation: animation,
         removing: true,
-        child: _buildGrid(source, () => onRemove(imageListModel.indexOf(source))));
+        child:
+            _buildGrid(source, () => onRemove(imageListModel.indexOf(source))));
   }
 
   int get imageCount => imageListModel.length;
@@ -273,46 +319,46 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     });
   }
 
+  void showSetting() async {
+    settingParams = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (BuildContext context) => Setting(params: settingParams)));
+    await storage.write(
+        key: Keys.settingStorage, value: settingParams.toJson());
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
         child: Scaffold(
           appBar: AppBar(
             title: Text(widget.title),
+            actions: [
+              IconButton(
+                  onPressed: showSetting, icon: const Icon(Icons.settings))
+            ],
           ),
           backgroundColor: Colors.grey[200],
           body: Column(
             children: <Widget>[
               widgets.Card(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        focusNode: textFieldFocus,
-                        controller: textEditingController,
-                        decoration:
-                            const InputDecoration(border: OutlineInputBorder(), labelText: '链接地址', hintText: '输入链接地址'),
-                        spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: getImageList,
-                        onTapOutside: (PointerDownEvent event) {
-                          textFieldFocus.unfocus();
-                        },
-                      ),
-                    ),
-                    const SizedBox(
-                      width: 8,
-                    ),
-                    TextButton(
-                        onPressed: () => getImageList(textEditingController.text),
-                        style: TextButton.styleFrom(backgroundColor: Colors.deepOrange, foregroundColor: Colors.white),
-                        child: Container(
-                          height: 48,
-                          alignment: Alignment.center,
-                          child: const Text('获取'),
-                        ))
-                  ],
+                child: TextField(
+                  focusNode: textFieldFocus,
+                  controller: textEditingController,
+                  decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                      labelText: '链接地址',
+                      hintText: '输入链接地址'),
+                  spellCheckConfiguration:
+                      const SpellCheckConfiguration.disabled(),
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: getImageList,
+                  onTapOutside: (PointerDownEvent event) {
+                    textFieldFocus.unfocus();
+                  },
                 ),
               ),
               Expanded(
@@ -320,6 +366,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 children: [
                   widgets.Card(
                       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                       child: Stack(
                         children: [
                           AnimatedOpacity(
@@ -331,9 +378,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.fromLTRB(5, 0, 0, 5),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text('获取到$imageCount张图片'),
                                           IconButton(
@@ -344,8 +391,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   });
                                                 }
                                               },
-                                              color: Colors.deepOrange,
-                                              icon: Icon(editMode ? Icons.done : Icons.edit_note))
+                                              icon: Icon(editMode
+                                                  ? Icons.done
+                                                  : Icons.edit_note))
                                         ],
                                       ),
                                     ),
@@ -353,40 +401,48 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                       child: Stack(
                                         clipBehavior: Clip.hardEdge,
                                         children: [
-                                          Theme(
-                                            data: Theme.of(context).copyWith(
-                                                scrollbarTheme: ScrollbarThemeData(
-                                                    thumbColor:
-                                                        MaterialStateProperty.all(Colors.deepOrange.withOpacity(.7)))),
-                                            child: Scrollbar(
-                                              radius: const Radius.circular(3),
-                                              child: AnimatedGrid(
-                                                key: _gridKey,
-                                                controller: _gridController,
-                                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                                    crossAxisCount: 3, mainAxisSpacing: 1.0, crossAxisSpacing: 1.0),
-                                                initialItemCount: imageCount,
-                                                itemBuilder: _gridItemBuilder,
-                                              ),
+                                          Scrollbar(
+                                            radius: const Radius.circular(3),
+                                            child: AnimatedGrid(
+                                              key: _gridKey,
+                                              controller: _gridController,
+                                              gridDelegate:
+                                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                                      crossAxisCount: 3,
+                                                      mainAxisSpacing: 1.0,
+                                                      crossAxisSpacing: 1.0),
+                                              initialItemCount: imageCount,
+                                              itemBuilder: _gridItemBuilder,
                                             ),
                                           ),
                                           AnimatedPositioned(
                                             left: 0,
-                                            bottom: (downloading && !isAborted) ? 0 : -60,
+                                            bottom: (downloading && !isAborted)
+                                                ? 0
+                                                : -60,
                                             right: 0,
-                                            duration: const Duration(microseconds: 400),
+                                            duration: const Duration(
+                                                microseconds: 400),
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
                                               children: [
                                                 Container(
-                                                  color: Colors.black.withOpacity(.75),
-                                                  padding: const EdgeInsets.only(left: 8.0),
+                                                  color: Colors.black
+                                                      .withOpacity(.75),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 8.0),
                                                   child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
                                                     children: [
                                                       Text(
                                                         '图片下载中 $imageSaved / $imageCount',
-                                                        style: const TextStyle(color: Colors.white),
+                                                        style: const TextStyle(
+                                                            color:
+                                                                Colors.white),
                                                       ),
                                                       IconButton(
                                                         onPressed: () {
@@ -395,14 +451,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                             loading = false;
                                                           });
                                                         },
-                                                        icon: const Icon(Icons.close),
+                                                        icon: const Icon(
+                                                            Icons.close),
                                                         color: Colors.red,
                                                       )
                                                     ],
                                                   ),
                                                 ),
                                                 imageCount > 0
-                                                    ? LinearProgressIndicator(value: imageSaved / imageCount)
+                                                    ? LinearProgressIndicator(
+                                                        value: imageSaved /
+                                                            imageCount)
                                                     : Container()
                                               ],
                                             ),
@@ -414,7 +473,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 )),
                           ),
                           AnimatedOpacity(
-                            opacity: imageCount > 0 ? 0 : 1,
+                            opacity: imageCount > 0 && !loading ? 0 : 1,
                             duration: const Duration(milliseconds: 200),
                             child: const Center(
                               child: Text('输入网址获取图片'),
