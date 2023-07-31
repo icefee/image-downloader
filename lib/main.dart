@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import './pages/entry.dart';
-import './tool/theme.dart';
+import './tools/theme.dart';
 
 void main() {
   runApp(const App());

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widget/entry.dart';
-import '../type/image.dart';
+import '../widgets/entry.dart';
+import '../types/image.dart';
 
 class Preview extends StatefulWidget {
   final List<ImageSource> sources;
