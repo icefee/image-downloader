@@ -3,10 +3,9 @@ import 'package:http/http.dart';
 
 Future<List<String>> getImages(String url) async {
   Response response = await get(Uri.parse(url));
-  Iterable<RegExpMatch> matches = RegExp(
-          r'(https?://)?[\w\u4e00-\u9fa5-./@%?=]+?\.((jpe?|pn)g|gif|webp)',
-          caseSensitive: false)
-      .allMatches(response.body.replaceAll(RegExp(r'\\/'), '/'));
+  Iterable<RegExpMatch> matches =
+      RegExp(r'(https?://)?[\w\u4e00-\u9fa5-./@%?:=]+?\.((jpe?|pn)g|gif|webp)', caseSensitive: false)
+          .allMatches(response.body.replaceAll(RegExp(r'\\/'), '/'));
   List<String> images = matches.map((m) => m.group(0)!).toSet().toList();
   Uri uri = Uri.parse(url);
   for (int i = 0; i < images.length; i++) {
@@ -18,8 +17,7 @@ Future<List<String>> getImages(String url) async {
           images[i] = uri.origin + images[i];
         }
       } else {
-        images[i] =
-            uri.origin + (uri.path.isNotEmpty ? uri.path : '/') + images[i];
+        images[i] = uri.origin + (uri.path.isNotEmpty ? uri.path : '/') + images[i];
       }
     }
   }
@@ -32,8 +30,7 @@ String proxyUrl(String url) {
   return '$proxyUrl?url=$encoded';
 }
 
-Future<void> downloadImage(String url, String path,
-    {Function(double)? onProcess}) async {
+Future<void> downloadImage(String url, String path, {Function(double)? onProcess}) async {
   HttpClient client = HttpClient();
   Uri target = Uri.parse(url);
   HttpClientRequest request = await client.getUrl(target);
