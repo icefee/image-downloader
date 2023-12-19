@@ -26,7 +26,7 @@ Future<List<String>> getImages(String url) async {
 }
 
 String proxyUrl(String url) {
-  const String proxyUrl = 'https://apps.gatsbyjs.io/api/proxy';
+  const String proxyUrl = 'https://spacedeta-3-f1000878.deta.app/api/proxy';
   String encoded = Uri.encodeComponent(url);
   return '$proxyUrl?url=$encoded';
 }
